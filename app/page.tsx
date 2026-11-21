@@ -1,10 +1,11 @@
+'use client';
 import { LearnerDashboard } from '@/components/learner/LearnerDashboard';
 import { LecturerDashboard } from '@/components/lecturer/LecturerDashboard';
 import { AssessorDashboard } from '@/components/assessor/AssessorDashboard';
 import { ProviderDashboard } from '@/components/provider/ProviderDashboard';
 import { InvestorModal } from '@/components/investor/InvestorModal';
 import { Form4MatrixModal } from '@/components/common/Form4MatrixModal';
-'use client';
+
 import {FormEvent,useEffect,useMemo,useRef,useState} from 'react';
 import UnderstandingCheck from '@/components/UnderstandingCheck';
 import LecturerControl from '@/components/LecturerControl';
