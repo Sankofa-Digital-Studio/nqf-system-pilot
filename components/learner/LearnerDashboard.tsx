@@ -6,6 +6,7 @@ import { MetricCard } from '@/components/common/MetricCard';
 import OverviewAccordion from '@/components/OverviewAccordion';
 import UnderstandingCheck from '@/components/UnderstandingCheck';
 import LessonPractice from '@/components/LessonPractice';
+import { UAT_COHORT_DATA } from '@/lib/uat-live-data';
 
 interface LearnerDashboardProps {
   state: LearnerState;
@@ -24,10 +25,15 @@ export function LearnerDashboard({
 }: LearnerDashboardProps) {
   const [topicOpen, setTopicOpen] = React.useState<boolean>(false);
   const [activePanel, setActivePanel] = React.useState<string>('pathway');
+  const [selectedLearnerId, setSelectedLearnerId] = React.useState<string>('lrn-thando');
 
-  const readinessPercent = (state.labComplete ? 35 : 10) +
-    (state.cognitiveComplete ? 25 : 0) +
-    (state.formalSubmitted ? 30 : 0) + 10;
+  const currentLearner = UAT_COHORT_DATA.find(l => l.id === selectedLearnerId) || UAT_COHORT_DATA[0];
+
+  const readinessPercent = selectedLearnerId === 'lrn-thando'
+    ? (state.labComplete ? 35 : 10) +
+      (state.cognitiveComplete ? 25 : 0) +
+      (state.formalSubmitted ? 30 : 0) + 10
+    : currentLearner.overallReadiness;
 
   const nextAction = !state.labComplete ? {
     view: 'lab',
@@ -74,7 +80,7 @@ export function LearnerDashboard({
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
               <span style={{
                 background: '#caec6b',
                 color: '#124d43',
@@ -84,17 +90,44 @@ export function LearnerDashboard({
                 borderRadius: '999px',
                 letterSpacing: '0.8px'
               }}>
-                NQF LEVEL 5 · SAQA 48573
+                NQF LEVEL 5 · SAQA {currentLearner.qualificationId}
               </span>
               <span style={{ color: '#a6beb9', fontSize: '13px' }}>
-                Cohort 01 · Milestone P01 (Hardware Fault Isolation)
+                {currentLearner.campus} · {currentLearner.classMilestone}
               </span>
+              <select
+                value={selectedLearnerId}
+                onChange={(e) => {
+                  const nextId = e.target.value;
+                  setSelectedLearnerId(nextId);
+                  const l = UAT_COHORT_DATA.find(x => x.id === nextId);
+                  if (l) {
+                    toast(`Simulating learner persona: ${l.name} (${l.employer}).`, 'info');
+                  }
+                }}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  color: '#ffffff',
+                  borderRadius: '6px',
+                  padding: '3px 8px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                {UAT_COHORT_DATA.map(l => (
+                  <option key={l.id} value={l.id} style={{ color: '#16282e', background: '#ffffff' }}>
+                    Candidate Persona: {l.name} ({l.overallReadiness}% · {l.employer.split('(')[0].trim()})
+                  </option>
+                ))}
+              </select>
             </div>
             <h1 style={{ fontSize: '32px', fontWeight: 900, margin: '6px 0', letterSpacing: '-0.5px' }}>
-              Welcome back, Thando Mokoena
+              Welcome back, {currentLearner.name}
             </h1>
-            <p style={{ margin: 0, fontSize: '15px', color: '#c5d8d3', maxWidth: '640px', lineHeight: 1.5 }}>
-              Build verifiable, auditable occupational evidence. Every observation, diagnostic hypothesis, and safe test feeds directly into your QCTO Portfolio of Evidence.
+            <p style={{ margin: 0, fontSize: '14px', color: '#c5d8d3', maxWidth: '640px', lineHeight: 1.5 }}>
+              Host Employer: <strong style={{ color: '#ffffff' }}>{currentLearner.employer}</strong> · Logbook: <strong style={{ color: '#ffffff' }}>{currentLearner.logbookHours} / 200 hrs</strong> · PoE Status: <strong style={{ color: '#caec6b' }}>{currentLearner.poeStatus.toUpperCase().replaceAll('_', ' ')}</strong>
             </p>
           </div>
 

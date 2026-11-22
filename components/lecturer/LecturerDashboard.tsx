@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import LecturerControl from '@/components/LecturerControl';
 import GradingControl from '@/components/GradingControl';
 import { MetricCard } from '@/components/common/MetricCard';
+import { UAT_SIGNALS_DATA, UAT_COHORT_DATA, UATSignal } from '@/lib/uat-live-data';
 
 interface LecturerDashboardProps {
   view: string;
@@ -20,20 +21,53 @@ export function LecturerDashboard({
   toast,
   onOpenForm4
 }: LecturerDashboardProps) {
+  const [signals, setSignals] = useState<UATSignal[]>(UAT_SIGNALS_DATA);
+
   if (view === 'marking') {
     return <GradingControl />;
   }
 
+  const handleSignalAction = async (id: string, action: 'acknowledged' | 'resolved') => {
+    setSignals(prev => prev.map(s => s.id === id ? { ...s, status: action } : s));
+    const item = signals.find(s => s.id === id);
+    try {
+      await fetch('/api/pilot', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          action: 'change_signal',
+          input: {
+            actorId: 'lecturer-naledi',
+            actorRole: 'lecturer',
+            learnerId: item?.learnerId || 'lrn-thando',
+            signalId: id,
+            status: action,
+            note: 'Reviewed in Lecturer Signal Governance portal against diagnostic evidence.'
+          }
+        })
+      });
+    } catch {}
+
+    toast(`Signal ${id} ${action} by Lecturer Naledi Dube.`, 'success');
+  };
+
   if (view === 'signals') {
+    const openSignals = signals.filter(s => s.status !== 'resolved');
+
     return (
       <div style={{ maxWidth: '1240px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: '#124d43', letterSpacing: '0.6px' }}>
-              SETA AUDIT COMPLIANCE & OBSERVABLE BEHAVIOUR
-            </span>
-            <h2 style={{ fontSize: '26px', fontWeight: 900, margin: '6px 0', color: '#16282e' }}>
-              Formative Signal Governance
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: '#124d43', background: '#caec6b', padding: '3px 8px', borderRadius: '4px' }}>
+                SETA AUDIT COMPLIANCE & SIGNAL GOVERNANCE
+              </span>
+              <span style={{ fontSize: '12px', color: '#556965', fontWeight: 600 }}>
+                {openSignals.length} Active Formative Warnings Requiring Human Review
+              </span>
+            </div>
+            <h2 style={{ fontSize: '26px', fontWeight: 900, margin: '4px 0', color: '#16282e' }}>
+              Attributed Formative Signal Governance
             </h2>
             <p style={{ margin: 0, fontSize: '13px', color: '#556965' }}>
               Observable learning events flagged for lecturer action. In an accredited occupational programme, AI or automation cannot replace lecturer review.
@@ -57,72 +91,130 @@ export function LecturerDashboard({
         </div>
 
         <div style={{ display: 'grid', gap: '12px' }}>
-          {state.signals.map((sig: string, idx: number) => (
-            <div
-              key={idx}
-              style={{
-                background: '#ffffff',
-                border: '1px solid #e1e8e5',
-                borderLeft: '4px solid #db8a44',
-                borderRadius: '10px',
-                padding: '18px 20px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}
-            >
-              <div>
-                <strong style={{ fontSize: '14px', color: '#16282e' }}>{sig}</strong>
-                <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#687e79' }}>
-                  Source: Formative cognitive check telemetry · Requires attributable human intervention.
-                </p>
-              </div>
-              <button
-                onClick={() => toast('Signal acknowledged by Lecturer Naledi Dube.', 'success')}
+          {signals.map((sig) => {
+            const isResolved = sig.status === 'resolved';
+            const isAck = sig.status === 'acknowledged';
+
+            return (
+              <div
+                key={sig.id}
                 style={{
-                  background: '#e8f5ee',
-                  color: '#124d43',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '8px 14px',
-                  fontSize: '12px',
-                  fontWeight: 800,
-                  cursor: 'pointer'
+                  background: isResolved ? '#f9fbf9' : '#ffffff',
+                  border: '1px solid #e1e8e5',
+                  borderLeft: `5px solid ${sig.severity === 'urgent' ? '#c53929' : sig.severity === 'support' ? '#db8a44' : '#2b627f'}`,
+                  borderRadius: '10px',
+                  padding: '18px 20px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  opacity: isResolved ? 0.65 : 1,
+                  flexWrap: 'wrap',
+                  gap: '12px'
                 }}
               >
-                Acknowledge Review
-              </button>
-            </div>
-          ))}
+                <div style={{ maxWidth: '800px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <strong style={{ fontSize: '14px', color: '#16282e' }}>{sig.learnerName}</strong>
+                    <span style={{
+                      background: sig.severity === 'urgent' ? '#fde8e8' : sig.severity === 'support' ? '#fff3e8' : '#eef5f8',
+                      color: sig.severity === 'urgent' ? '#c53929' : sig.severity === 'support' ? '#b05d15' : '#2b627f',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      fontSize: '10px',
+                      fontWeight: 800,
+                      textTransform: 'uppercase'
+                    }}>
+                      {sig.severity}
+                    </span>
+                    <span style={{ fontSize: '11px', color: '#738782' }}>
+                      Topic: {sig.topicCode.replaceAll('_', ' ')} · ID: {sig.id}
+                    </span>
+                  </div>
+                  <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#334b46', fontWeight: 600 }}>
+                    {sig.message}
+                  </p>
+                  <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#738782' }}>
+                    Status: <strong style={{ textTransform: 'capitalize' }}>{sig.status}</strong> · Telemetry source: Formative diagnostic checkpoint
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {!isResolved && (
+                    <>
+                      <button
+                        onClick={() => handleSignalAction(sig.id, 'acknowledged')}
+                        disabled={isAck}
+                        style={{
+                          background: isAck ? '#e5ede8' : '#e8f5ee',
+                          color: '#124d43',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '8px 14px',
+                          fontSize: '12px',
+                          fontWeight: 800,
+                          cursor: isAck ? 'default' : 'pointer'
+                        }}
+                      >
+                        {isAck ? 'Acknowledged' : 'Acknowledge'}
+                      </button>
+                      <button
+                        onClick={() => handleSignalAction(sig.id, 'resolved')}
+                        style={{
+                          background: '#124d43',
+                          color: '#caec6b',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '8px 14px',
+                          fontSize: '12px',
+                          fontWeight: 800,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Resolve Signal
+                      </button>
+                    </>
+                  )}
+                  {isResolved && (
+                    <span style={{ color: '#2a9d68', fontSize: '12px', fontWeight: 800 }}>
+                      ✓ Signal Resolved
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     );
   }
+
+  const avgReadiness = Math.round(UAT_COHORT_DATA.reduce((acc, l) => acc + l.overallReadiness, 0) / UAT_COHORT_DATA.length);
+  const openSignalCount = signals.filter(s => s.status !== 'resolved').length;
 
   return (
     <div style={{ maxWidth: '1240px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Executive Cohort Health Metrics */}
       <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
         <MetricCard
-          label="Active Cohort"
-          value="4 Learners"
-          subtext="Cohort 01 (TVET Metro South) enrolled on SAQA 48573."
-          badge="In Progress"
+          label="Active Multi-Campus Cohorts"
+          value={`${UAT_COHORT_DATA.length} TVET Learners`}
+          subtext="Metro South TVET (Soweto & Alex) + Highlands Tech (Pretoria)."
+          badge="Live Roster"
           status="secure"
         />
         <MetricCard
           label="Cohort Average Readiness"
-          value="61.5%"
-          subtext="Composite score across P01 hardware diagnostic labs."
+          value={`${avgReadiness}%`}
+          subtext="Composite score across P01 & PSM-TEST practical diagnostic labs."
           badge="Developing"
           status="developing"
         />
         <MetricCard
-          label="Active Warnings & Signals"
-          value="3 Flagged"
+          label="Active Pedagogical Signals"
+          value={`${openSignalCount} Flagged`}
           subtext="Cognitive gap events requiring targeted retrieval assignment."
           badge="Action Required"
-          status="risk"
+          status={openSignalCount > 0 ? "risk" : "secure"}
         />
         <MetricCard
           label="Form 4 Curriculum Coverage"
