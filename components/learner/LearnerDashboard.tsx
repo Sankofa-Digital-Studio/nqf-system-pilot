@@ -7,6 +7,7 @@ import OverviewAccordion from '@/components/OverviewAccordion';
 import UnderstandingCheck from '@/components/UnderstandingCheck';
 import LessonPractice from '@/components/LessonPractice';
 import { UAT_COHORT_DATA } from '@/lib/uat-live-data';
+import { WorkplaceLogbookModal } from '@/components/common/WorkplaceLogbookModal';
 
 interface LearnerDashboardProps {
   state: LearnerState;
@@ -26,6 +27,7 @@ export function LearnerDashboard({
   const [topicOpen, setTopicOpen] = React.useState<boolean>(false);
   const [activePanel, setActivePanel] = React.useState<string>('pathway');
   const [selectedLearnerId, setSelectedLearnerId] = React.useState<string>('lrn-thando');
+  const [logbookModalOpen, setLogbookModalOpen] = React.useState<boolean>(false);
 
   const currentLearner = UAT_COHORT_DATA.find(l => l.id === selectedLearnerId) || UAT_COHORT_DATA[0];
 
@@ -180,7 +182,23 @@ export function LearnerDashboard({
             </span>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setLogbookModalOpen(true)}
+              style={{
+                background: '#ffffff',
+                color: '#124d43',
+                border: '1px solid #cfdad6',
+                borderRadius: '10px',
+                padding: '14px 20px',
+                fontSize: '13px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              Workplace Logbook ({currentLearner.logbookHours}/200 hrs) →
+            </button>
             <button
               onClick={() => route(nextAction.view)}
               style={{
@@ -466,6 +484,14 @@ export function LearnerDashboard({
           </div>
         </div>
       )}
+
+      {/* Workplace Logbook Inspection Modal */}
+      <WorkplaceLogbookModal
+        isOpen={logbookModalOpen}
+        onClose={() => setLogbookModalOpen(false)}
+        initialLearnerId={selectedLearnerId}
+        toast={toast}
+      />
     </div>
   );
 }

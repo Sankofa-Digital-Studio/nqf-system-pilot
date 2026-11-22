@@ -2,8 +2,9 @@ import {NextResponse} from 'next/server';
 import {getLearnerState,listCohort,recordUnderstandingCheck,syncLearnerProgress,type CheckInput} from '@/lib/pilot-db';
 import {assignIntervention,changeIntervention,changeSignal,getLearnerControl,listLecturerCohort,saveGrade,setGate} from '@/lib/lecturer-control';
 import {UAT_COHORT_DATA, UAT_INTERVENTIONS_DATA, UAT_EVIDENCE_PORTFOLIO, UAT_SIGNALS_DATA} from '@/lib/uat-live-data';
+import {TRANSITION_CROSSWALK_DATA, NATED_SUBJECTS_CATALOG, SETA_GRANT_CONTRACT_DATA, UAT_WORKPLACE_LOGBOOK_ENTRIES} from '@/lib/nated-transition-data';
 
-const manifest={mode:'stakeholder-pilot',persistence:'D1 SQLite for synthetic operational records',qualificationClaim:'readiness-model-only',classDirection:'P01 Hardware fault isolation',personalisationRule:'Extra-help activities support but never replace or reorder the class programme.',governingRoute:'Verify registered qualification and provider scope with SAQA/QCTO before delivery.',implementedSlices:['multi-learner records','topic mastery','validated understanding checks','weakness signals','lecturer interventions','warning transitions','gate control','grading and recheck closure','audit events','assessor portfolio verification','cross-campus UAT datasets'],securityBoundary:'Private site access; internal role attribution remains simulated until server-side identity and RBAC are added.'};
+const manifest={mode:'stakeholder-pilot',persistence:'D1 SQLite for synthetic operational records',qualificationClaim:'readiness-model-only',classDirection:'P01 Hardware fault isolation',personalisationRule:'Extra-help activities support but never replace or reorder the class programme.',governingRoute:'Verify registered qualification and provider scope with SAQA/QCTO before delivery.',implementedSlices:['multi-learner records','topic mastery','validated understanding checks','weakness signals','lecturer interventions','warning transitions','gate control','grading and recheck closure','audit events','assessor portfolio verification','cross-campus UAT datasets','NATED to QCTO transition crosswalk','workplace logbook mentor verification','SETA grant tranche drawdown'],securityBoundary:'Private site access; internal role attribution remains simulated until server-side identity and RBAC are added.'};
 function problem(message:string,status=400,details?:unknown){return NextResponse.json({ok:false,message,details},{status})}
 
 export async function GET(request:Request){
@@ -17,6 +18,9 @@ export async function GET(request:Request){
     if(resource==='uat_evidence')return NextResponse.json({ok:true,evidence:UAT_EVIDENCE_PORTFOLIO});
     if(resource==='uat_interventions')return NextResponse.json({ok:true,interventions:UAT_INTERVENTIONS_DATA});
     if(resource==='uat_signals')return NextResponse.json({ok:true,signals:UAT_SIGNALS_DATA});
+    if(resource==='nated_crosswalk')return NextResponse.json({ok:true,crosswalk:TRANSITION_CROSSWALK_DATA,subjects:NATED_SUBJECTS_CATALOG});
+    if(resource==='workplace_logbook')return NextResponse.json({ok:true,logbook:UAT_WORKPLACE_LOGBOOK_ENTRIES});
+    if(resource==='seta_contract')return NextResponse.json({ok:true,contract:SETA_GRANT_CONTRACT_DATA});
     return NextResponse.json({ok:true,manifest});
   }catch(error){return problem('Operational store is unavailable.',503,error instanceof Error?error.message:'Unknown storage error')}
 }
@@ -50,6 +54,25 @@ export async function POST(request:Request){
           found.moderationSampled = input.sampled;
         }
         result = { accepted: true, artifactId: input.artifactId, sampled: input.sampled };
+        break;
+      }
+      case 'sign_logbook_task': {
+        const input = (payload.input || {}) as { taskId: string; status: 'mentor_approved' | 'returned_for_revision'; mentorName: string };
+        const found = UAT_WORKPLACE_LOGBOOK_ENTRIES.find(t => t.id === input.taskId);
+        if (found) {
+          found.status = input.status;
+          found.verifiedAt = new Date().toISOString();
+        }
+        result = { accepted: true, taskId: input.taskId, status: input.status, verifiedAt: new Date().toISOString() };
+        break;
+      }
+      case 'claim_tranche': {
+        const input = (payload.input || {}) as { trancheNumber: number };
+        const tranche = SETA_GRANT_CONTRACT_DATA.tranches.find(t => t.trancheNumber === input.trancheNumber);
+        if (tranche) {
+          tranche.status = 'claim_ready';
+        }
+        result = { accepted: true, trancheNumber: input.trancheNumber, claimReady: true, contract: SETA_GRANT_CONTRACT_DATA.contractNumber };
         break;
       }
       default:return problem('Unsupported action.');
