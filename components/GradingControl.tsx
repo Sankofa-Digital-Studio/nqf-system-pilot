@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { UAT_COHORT_DATA } from '@/lib/uat-live-data';
 
 const criteria = [
@@ -10,6 +10,23 @@ const criteria = [
 ] as const;
 
 const actor = { actorId: 'lecturer-naledi', actorRole: 'lecturer' } as const;
+
+type GradingProfile = {
+  learner?: { name: string; campus?: string; employer?: string };
+  classDirection?: string;
+  signals?: Array<{ status: string }>;
+  interventions?: Array<{ status: string }>;
+  grades?: Array<{ assessorStatus: string }>;
+};
+
+type GradeResponse = {
+  errors?: string[];
+  details?: string;
+  message?: string;
+  score: number;
+  decision: string;
+  assessorStatus: string;
+};
 
 export default function GradingControl() {
   const [learnerId, setLearnerId] = useState('lrn-thando');
@@ -23,21 +40,25 @@ export default function GradingControl() {
   const [feedback, setFeedback] = useState('Your sequence is safe. Add the exact observed result and explain how it changed your decision.');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<GradingProfile | null>(null);
 
   const score = useMemo(() => Math.round((Object.values(rubric).reduce((sum, value) => sum + value, 0) / 16) * 100), [rubric]);
 
-  async function load() {
+  const load = useCallback(async (signal?: AbortSignal) => {
     try {
-      const response = await fetch(`/api/pilot?resource=learner_control&learnerId=${learnerId}`);
-      const data = await response.json() as any;
-      if (response.ok) setProfile(data);
-    } catch {}
-  }
+      const response = await fetch(`/api/pilot?resource=learner_control&learnerId=${encodeURIComponent(learnerId)}`, { signal });
+      const data = await response.json() as GradingProfile;
+      if (response.ok && !signal?.aborted) setProfile(data);
+    } catch {
+      // Preserve the current grading context if the record cannot be refreshed.
+    }
+  }, [learnerId]);
 
   useEffect(() => {
-    load();
-  }, [learnerId]);
+    const controller = new AbortController();
+    void load(controller.signal);
+    return () => controller.abort();
+  }, [load]);
 
   async function save() {
     setBusy(true);
@@ -51,7 +72,7 @@ export default function GradingControl() {
           input: { ...actor, learnerId, artifactCode: 'P01', rubric, decision, feedback }
         })
       });
-      const data = await response.json() as any;
+      const data = await response.json() as GradeResponse;
       if (!response.ok) throw new Error(data.errors?.join(' ') || data.details || data.message);
       setMessage(`${data.score}% ${data.decision}. Assessor status remains ${data.assessorStatus}.`);
       await load();
@@ -153,10 +174,10 @@ export default function GradingControl() {
               Class milestone<b>{profile?.classDirection}</b>
             </span>
             <span>
-              Open warnings<b>{profile?.signals?.filter((item: any) => item.status !== 'resolved').length || 0}</b>
+              Open warnings<b>{profile?.signals?.filter(item => item.status !== 'resolved').length || 0}</b>
             </span>
             <span>
-              Extra-help tasks<b>{profile?.interventions?.filter((item: any) => item.status !== 'closed').length || 0}</b>
+              Extra-help tasks<b>{profile?.interventions?.filter(item => item.status !== 'closed').length || 0}</b>
             </span>
             <span>
               Assessor status<b>{profile?.grades?.[0]?.assessorStatus || 'pending'}</b>
