@@ -21,8 +21,8 @@ export function AssessorDashboard({
   // Load latest live evidence from API if available
   useEffect(() => {
     fetch('/api/pilot?resource=uat_evidence')
-      .then(res => res.ok ? res.json() : null)
-      .then((data: { evidence?: UATEvidenceArtifact[] } | null) => {
+      .then(res => res.ok ? res.json() as Promise<{ evidence?: UATEvidenceArtifact[] }> : null)
+      .then(data => {
         if (data?.evidence?.length) {
           setEvidenceList(data.evidence);
         }

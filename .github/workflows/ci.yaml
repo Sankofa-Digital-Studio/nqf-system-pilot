@@ -49,7 +49,15 @@ jobs:
         run: npm exec -- tsc --noEmit --incremental false
       - name: Build
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: npm run build
+        run: |
+          npm run build
+          test -d dist
+      - name: Build with the Vercel configuration
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          VERCEL: '1'
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: npm exec -- next build
       - name: Package build output
         if: github.event_name == 'workflow_dispatch' && inputs.retain-build
         run: tar -czf vinext-build.tar.gz dist

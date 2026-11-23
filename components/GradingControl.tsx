@@ -56,8 +56,8 @@ export default function GradingControl() {
 
   useEffect(() => {
     const controller = new AbortController();
-    void load(controller.signal);
-    return () => controller.abort();
+    const start = setTimeout(() => void load(controller.signal), 0);
+    return () => { clearTimeout(start); controller.abort(); };
   }, [load]);
 
   async function save() {
