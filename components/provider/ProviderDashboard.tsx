@@ -8,16 +8,12 @@ import { SetaClaimModal } from './SetaClaimModal';
 import { WorkplaceLogbookModal } from '@/components/common/WorkplaceLogbookModal';
 
 interface ProviderDashboardProps {
-  view: string;
-  state: any;
   onOpenInvestor: () => void;
   onOpenForm4: () => void;
   toast?: (msg: string, tone?: string) => void;
 }
 
 export function ProviderDashboard({
-  view,
-  state,
   onOpenInvestor,
   onOpenForm4,
   toast

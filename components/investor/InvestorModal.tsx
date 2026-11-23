@@ -78,7 +78,7 @@ export function InvestorModal({ isOpen, onClose }: InvestorModalProps) {
             <span style={{ fontSize: '13px', color: '#687e79' }}>Bridge5 QCTO Evidence & Compliance OS</span>
           </div>
           <h2 style={{ fontSize: '28px', fontWeight: 900, margin: '6px 0', letterSpacing: '-0.5px' }}>
-            The Operating System for South Africa's Occupational Qualifications
+            The Operating System for South Africa&apos;s Occupational Qualifications
           </h2>
           <p style={{ margin: 0, fontSize: '14px', color: '#556965', lineHeight: 1.6 }}>
             Over 1,200 accredited Skills Development Providers (SDPs) and 50 TVET colleges face severe accreditation and grant-risk penalties as legacy unit standards sunset. Bridge5 automates QCTO Form 4 mapping, modular evidence tracking, and SETA audit readiness.

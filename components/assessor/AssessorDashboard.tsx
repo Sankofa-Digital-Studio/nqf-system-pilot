@@ -5,15 +5,11 @@ import { MetricCard } from '@/components/common/MetricCard';
 import { UATEvidenceArtifact, UAT_EVIDENCE_PORTFOLIO } from '@/lib/uat-live-data';
 
 interface AssessorDashboardProps {
-  view: string;
-  state: any;
   toast: (msg: string, tone?: string) => void;
   onOpenForm4: () => void;
 }
 
 export function AssessorDashboard({
-  view,
-  state,
   toast,
   onOpenForm4
 }: AssessorDashboardProps) {
@@ -25,8 +21,8 @@ export function AssessorDashboard({
   // Load latest live evidence from API if available
   useEffect(() => {
     fetch('/api/pilot?resource=uat_evidence')
-      .then(res => res.ok ? res.json() : null)
-      .then((data: any) => {
+      .then(res => res.ok ? res.json() as Promise<{ evidence?: UATEvidenceArtifact[] }> : null)
+      .then(data => {
         if (data?.evidence?.length) {
           setEvidenceList(data.evidence);
         }

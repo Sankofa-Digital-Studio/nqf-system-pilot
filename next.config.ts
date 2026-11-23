@@ -3,9 +3,11 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
-    resolveAlias: {
-      'cloudflare:workers': './lib/cloudflare-workers-vercel-shim.ts',
-    },
+    ...(process.env.VERCEL === '1' && {
+      resolveAlias: {
+        'cloudflare:workers': './lib/cloudflare-workers-vercel-shim.ts',
+      },
+    }),
   },
 };
 
