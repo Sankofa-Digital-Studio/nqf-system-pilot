@@ -68,6 +68,7 @@ jobs:
         with:
           artifact-ids: ${{ needs.quality.outputs.artifact-id }}
           path: artifact
+          merge-multiple: true
           digest-mismatch: error
       - name: Verify archive contains the build
         run: |
