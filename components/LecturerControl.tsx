@@ -48,36 +48,41 @@ export default function LecturerControl({ focus = 'cohort' }: { focus?: 'cohort'
   const [severity, setSeverity] = useState('support');
   const [dueAt, setDueAt] = useState('2026-11-28');
 
-  const loadCohort = useCallback(async () => {
+  const loadCohort = useCallback(async (signal?: AbortSignal) => {
     try {
-      const response = await fetch('/api/pilot?resource=lecturer_cohort');
-      const data = await response.json() as any;
+      const response = await fetch('/api/pilot?resource=lecturer_cohort', { signal });
+      const data = await response.json() as { learners?: Learner[]; message?: string };
       if (!response.ok) throw new Error(data.message || 'Cohort unavailable.');
+      if (signal?.aborted) return;
       setLearners(data.learners || []);
       setSelected(current => current || data.learners?.[0]?.id || '');
-    } catch (e: any) {
-      setMessage(e.message || 'Cohort load error');
+    } catch (error) {
+      if (!signal?.aborted) setMessage(error instanceof Error ? error.message : 'Cohort load error');
     }
   }, []);
 
-  const loadProfile = useCallback(async (id: string) => {
+  const loadProfile = useCallback(async (id: string, signal?: AbortSignal) => {
     if (!id) return;
     try {
-      const response = await fetch(`/api/pilot?resource=learner_control&learnerId=${encodeURIComponent(id)}`);
-      const data = await response.json() as any;
+      const response = await fetch(`/api/pilot?resource=learner_control&learnerId=${encodeURIComponent(id)}`, { signal });
+      const data = await response.json() as Profile & { message?: string };
       if (!response.ok) throw new Error(data.message || 'Learner record unavailable.');
-      setProfile(data);
-    } catch (e: any) {
-      setMessage(e.message || 'Learner profile load error');
+      if (!signal?.aborted) setProfile(data);
+    } catch (error) {
+      if (!signal?.aborted) setMessage(error instanceof Error ? error.message : 'Learner profile load error');
     }
   }, []);
 
   useEffect(() => {
-    loadCohort();
+    const controller = new AbortController();
+    const start = setTimeout(() => void loadCohort(controller.signal), 0);
+    return () => { clearTimeout(start); controller.abort(); };
   }, [loadCohort]);
 
   useEffect(() => {
-    loadProfile(selected);
+    const controller = new AbortController();
+    const start = setTimeout(() => void loadProfile(selected, controller.signal), 0);
+    return () => { clearTimeout(start); controller.abort(); };
   }, [selected, loadProfile]);
 
   const displayedLearners = useMemo(() => {
@@ -95,7 +100,7 @@ export default function LecturerControl({ focus = 'cohort' }: { focus?: 'cohort'
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ action, input: { ...actor, ...input } })
       });
-      const data = await response.json() as any;
+      const data = await response.json() as { errors?: string[]; details?: string; message?: string };
       if (!response.ok) throw new Error(data.errors?.join(' ') || data.details || data.message);
       setMessage('Control saved and added to the learner audit trail.');
       await Promise.all([loadCohort(), loadProfile(selected)]);

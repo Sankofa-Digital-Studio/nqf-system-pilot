@@ -1,0 +1,21 @@
+name: Dependency review
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - package.json
+      - package-lock.json
+      - .github/workflows/dependency-review.yml
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/dependency-review-action@v5.0.0
+        with:
+          fail-on-severity: high

@@ -8,16 +8,12 @@ import { UAT_SIGNALS_DATA, UAT_COHORT_DATA, UATSignal } from '@/lib/uat-live-dat
 
 interface LecturerDashboardProps {
   view: string;
-  state: any;
-  setState: React.Dispatch<React.SetStateAction<any>>;
   toast: (msg: string, tone?: string) => void;
   onOpenForm4: () => void;
 }
 
 export function LecturerDashboard({
   view,
-  state,
-  setState,
   toast,
   onOpenForm4
 }: LecturerDashboardProps) {
